@@ -8,10 +8,9 @@ require_once('user.php');
 
 // Check if the form is submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Get username, password, and age from the form
+    // Get username and password from the form
     $username = $_POST['username'];
     $password = md5($_POST['password']);
-    $age = $_POST['age'];
 
     // Prepare SQL statement to fetch user from the database
     $sql = "SELECT * FROM cap WHERE name = ?";
@@ -37,14 +36,29 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     } else {
         if ($result->num_rows > 0) {
             $user = $result->fetch_assoc();
+            $valid_password = $user['password']; // Get the valid password from the database
             $valid_age = $user['age']; // Get the valid age from the database
 
-            // Verify password and age
-            if ($password === $user['password']) {
+            // Verify password
+            if ($password === $valid_password) {
                 echo "Login successful!\n";
                 $_SESSION['username'] = $username;
             } else {
-                echo "Invalid username or password. Please try again.\n";
+                // Check if two wrong password attempts have been made
+                if (isset($_SESSION['password_attempts']) && $_SESSION['password_attempts'] >= 2) {
+                    // Age validation after two wrong password attempts
+                    $age_input = $_POST['age'];
+                    if (intval($age_input) === intval($valid_age)) {
+                        echo "Login successful! \n";
+                        $_SESSION['username'] = $username;
+                    } else {
+                        echo "Invalid age. Please try again.\n";
+                    }
+                } else {
+                    // Increment password attempts
+                    $_SESSION['password_attempts'] = isset($_SESSION['password_attempts']) ? $_SESSION['password_attempts'] + 1 : 1;
+                    echo "Invalid username or password. Please try again.\n";
+                }
             }
         } else {
             echo "User not found.";
@@ -54,48 +68,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     // Close statement
     $stmt->close();
 } else {
-    // Login attempt code
-    $valid_username = "user";
-    $valid_password = "password";
-    $valid_age = "age";
-
-    $max_attempts = 2;
-    $attempts = 0;
-    $age_attempts = 0;
-
-    while ($attempts < $max_attempts) {
-        $username = readline("Enter username: ");
-        $password = readline("Enter password: ");
-
-        if ($username === $valid_username && $password === $valid_password) {
-            echo "Login successful! \n";
-            break;
-        } else {
-            $attempts++;
-            if ($attempts >= $max_attempts) {
-                echo "Maximum attempts reached for username and password. Proceeding to age validation.\n";
-                break;
-            }
-            echo "Invalid username or password. Please try again.\n";
-        }
-    }
-
-    if ($attempts === $max_attempts) {
-        while ($age_attempts < $max_attempts) {
-            $age_input = readline("Enter age: ");
-            if (intval($age_input) === intval($valid_age)) {
-                echo "Login successful! \n";
-                break;
-            } else {
-                $age_attempts++;
-                echo "Invalid age. Please try again.\n";
-            }
-        }
-
-        if ($age_attempts === $max_attempts) {
-            echo "You've reached the maximum number of login attempts.\n";
-            echo "Here's a valid entry of age: $valid_age\n";
-        }
-    }
+    // Display login form
+    // Note: HTML form code to be inserted here
 }
 ?>
